@@ -1,7 +1,7 @@
 pub mod note;
 pub mod storage;
 
-pub use note::StickyNote;
+pub use note::AppNote;
 pub use storage::{NoteStorage, StorageStats};
 
 #[cfg(test)]
@@ -10,7 +10,7 @@ mod tests {
 
     #[test]
     fn test_sticky_note_creation() {
-        let note = StickyNote::new("Test Title".to_string(), "Test Content".to_string());
+        let note = AppNote::new("Test Title".to_string(), "Test Content".to_string());
         assert_eq!(note.title, "Test Title");
         assert_eq!(note.content, "Test Content");
         assert!(!note.id.is_empty());
@@ -20,7 +20,7 @@ mod tests {
 
     #[test]
     fn test_sticky_note_update() {
-        let mut note = StickyNote::new("Original".to_string(), "Original Content".to_string());
+        let mut note = AppNote::new("Original".to_string(), "Original Content".to_string());
         let original_updated_at = note.updated_at.clone();
         
         // Sleep longer to ensure timestamp changes (format is to the minute)
@@ -37,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_sticky_note_position() {
-        let mut note = StickyNote::default();
+        let mut note = AppNote::default();
         note.set_position(100.0, 200.0);
         
         assert_eq!(note.x, 100.0);
@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn test_sticky_note_size() {
-        let mut note = StickyNote::default();
+        let mut note = AppNote::default();
         note.set_size(300.0, 400.0);
         
         assert_eq!(note.width, 300.0);

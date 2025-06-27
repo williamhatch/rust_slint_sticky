@@ -1,273 +1,878 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit, TextEdit, ListView, StandardListView } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, TextEdit, ComboBox, ListView } from "std-widgets.slint";
 
+// Define structs
 export struct StickyNote {
     id: string,
     title: string,
     content: string,
-    color: color,
     x: length,
     y: length,
     width: length,
     height: length,
-    created_at: string,
+    color: color,
+    text_color: color,
+    tags: [string],
+    workflow_status: string,
+    priority: string,
+    due_date: string,
+    estimated_time: int,
+    completion_percentage: float,
     updated_at: string,
 }
 
-component StickyNoteCard inherits Rectangle {
+export struct NoteRelation {
+    from_note_id: string,
+    to_note_id: string,
+    relation_type: string,
+    strength: float,
+}
+
+// DraggableStickyNote组件
+component DraggableStickyNote inherits Rectangle {
     in property <StickyNote> note;
-    callback clicked();
+    in property <bool> show-relations;
+    
     callback edit-note(StickyNote);
     callback delete-note(string);
+    callback position-changed(string, length, length);
+    callback workflow-status-changed(string, string);
     
-    width: note.width;
-    height: note.height;
+    // 计算自动对比颜色
+    function calculate-luminance(color: color) -> float {
+        0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue
+    }
+    
+    function get-optimal-text-color(bg-color: color) -> color {
+        if (root.calculate-luminance(bg-color) > 0.5) {
+            #000000  // 亮背景用黑色文字
+        } else {
+            #ffffff  // 暗背景用白色文字
+        }
+    }
+    
+    property <color> effective-text-color: {
+        if (note.text_color.alpha > 0) { 
+            note.text_color 
+        } else { 
+            root.get-optimal-text-color(note.color)
+        }
+    };
+    
+    x: note.x;
+    y: note.y;
+    width: 220px;
+    height: 180px;
     background: note.color;
     border-radius: 8px;
     drop-shadow-blur: 4px;
-    drop-shadow-color: #00000040;
+    drop-shadow-color: #00000030;
+    border-width: 1px;
+    border-color: #e0e0e0;
     
-    touch := TouchArea {
-        clicked => { 
-            root.edit-note(root.note);
+    // 拖拽状态
+    property <bool> is-dragging: false;
+    property <length> drag-start-x;
+    property <length> drag-start-y;
+    property <length> drag-offset-x;
+    property <length> drag-offset-y;
+
+    // 拖拽区域
+    Rectangle {
+        x: 5px;
+        y: 5px;
+        width: parent.width - 90px;
+        height: 25px;
+        background: transparent;
+        
+        TouchArea {
+            mouse-cursor: root.is-dragging ? MouseCursor.grabbing : MouseCursor.grab;
+            
+            pointer-event(event) => {
+                if (event.button == PointerEventButton.left) {
+                    if (event.kind == PointerEventKind.down) {
+                        root.is-dragging = true;
+                        root.drag-start-x = root.x;
+                        root.drag-start-y = root.y;
+                        root.drag-offset-x = self.mouse-x;
+                        root.drag-offset-y = self.mouse-y;
+                        debug("🔥 [DRAG START] Note ID:", root.note.id);
+                    } else if (event.kind == PointerEventKind.up) {
+                        if (root.is-dragging) {
+                            root.is-dragging = false;
+                            root.position-changed(root.note.id, root.x, root.y);
+                            debug("🔥 [DRAG END] Note ID:", root.note.id);
+                        }
+                    }
+                }
+            }
+            
+            moved => {
+                if (root.is-dragging) {
+                    root.x = root.drag-start-x + self.mouse-x - root.drag-offset-x;
+                    root.y = root.drag-start-y + self.mouse-y - root.drag-offset-y;
+                }
+            }
         }
     }
     
     VerticalBox {
         padding: 12px;
-        spacing: 8px;
+        spacing: 6px;
         
+        // 标题和控件行
         HorizontalBox {
+            spacing: 8px;
+            alignment: space-between;
+            
+            // 标题区域 - 限制宽度避免越界
+            Rectangle {
+                width: parent.width - 90px; // 给控件留空间
+                height: 32px;
+                
+                TouchArea {
+                    clicked => { root.edit-note(root.note); }
+                    mouse-cursor: MouseCursor.pointer;
+                }
+                
+                Text {
+                    text: note.title;
+                    font-weight: 700;
+                    font-size: 13px;
+                    horizontal-alignment: left;
+                    vertical-alignment: center;
+                    wrap: word-wrap;
+                    overflow: elide;
+                    color: root.effective-text-color;
+                }
+            }
+            
+                            // 右侧控件区域 - 固定宽度避免越界
+                Rectangle {
+                    width: 90px;
+                    height: 32px;
+                    
+                    HorizontalBox {
+                        spacing: 3px;
+                        
+                        // 状态下拉框
+                        ComboBox {
+                            width: 62px;
+                            height: 22px;
+                            model: ["Idea", "Todo", "In Progress", "Review", "Done"];
+                            current-value: note.workflow_status;
+                            selected => {
+                                root.workflow-status-changed(root.note.id, self.current-value);
+                                debug("📋 Status changed to:", self.current-value, "for note:", root.note.id);
+                            }
+                        }
+                        
+                        // 删除按钮
+                        Rectangle {
+                            width: 20px;
+                            height: 20px;
+                            background: #ff5722;
+                            border-radius: 3px;
+                            
+                            TouchArea {
+                                clicked => { 
+                                    root.delete-note(note.id);
+                                    debug("❌ Delete clicked for note:", note.id);
+                                }
+                                mouse-cursor: MouseCursor.pointer;
+                            }
+                            
+                            Text {
+                                text: "×";
+                                color: white;
+                                font-size: 12px;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+        }
+        
+        // 内容区域 - 限制高度避免越界
+        Rectangle {
+            height: 85px; // 固定高度
+            
+            TouchArea {
+                clicked => { root.edit-note(root.note); }
+                mouse-cursor: MouseCursor.pointer;
+            }
+            
             Text {
-                text: note.title;
-                font-weight: 700;
-                font-size: 14px;
+                text: note.content;
+                font-size: 11px;
                 horizontal-alignment: left;
                 vertical-alignment: top;
                 wrap: word-wrap;
+                overflow: elide;
+                color: root.effective-text-color;
             }
+        }
+        
+        // 进度条
+        Rectangle {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
             
             Rectangle {
-                width: 20px;
-                height: 20px;
-                
-                Button {
-                    text: "×";
-                    width: 20px;
-                    height: 20px;
-                    clicked => { root.delete-note(note.id); }
-                }
+                width: parent.width * 0.6;
+                height: parent.height;
+                background: #4caf50;
+                border-radius: 2px;
             }
         }
         
-        Text {
-            text: note.content;
-            font-size: 12px;
-            horizontal-alignment: left;
-            vertical-alignment: top;
-            wrap: word-wrap;
-            overflow: elide;
-        }
-        
-        Text {
-            text: note.updated_at;
-            font-size: 10px;
-            color: #666;
-            horizontal-alignment: left;
+        // 底部信息
+        HorizontalBox {
+            spacing: 8px;
+            alignment: space-between;
+            
+            // 时间戳
+            Text {
+                text: note.updated_at;
+                font-size: 9px;
+                horizontal-alignment: left;
+                color: root.effective-text-color == #ffffff ? #cccccc : #666666;
+                overflow: elide;
+            }
+            
+            // 优先级指示器
+            if note.priority == "High" || note.priority == "Urgent": Text {
+                text: note.priority == "Urgent" ? "🔥" : "⚡";
+                font-size: 12px;
+            }
         }
     }
 }
 
-component NoteEditor inherits Dialog {
+// 美化的编辑器
+component AdvancedNoteEditor inherits Window {
     in-out property <string> note-title: "";
     in-out property <string> content: "";
     in-out property <color> note-color: #ffeb3b;
+    in-out property <color> text-color: transparent;
+    in-out property <string> tags-text: "";
+    in-out property <string> workflow-status: "Idea";
+    in-out property <string> priority: "Medium";
+    in-out property <string> due-date: "";
+    in-out property <int> estimated-time: 0;
     
-    callback save-note(string, string, color);
+    callback save-note(string, string, color, color, string, string, string, string, int);
     callback cancel();
     
-    width: 400px;
-    height: 300px;
+    width: 480px;
+    height: 550px;
+    background: #ffffff;
+    no-frame: false;
     
-    VerticalBox {
-        padding: 20px;
-        spacing: 10px;
+    Rectangle {
+        background: #ffffff;
+        border-radius: 12px;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: #00000020;
         
-        Text {
-            text: "Edit Sticky Note";
-            font-size: 18px;
-            font-weight: 700;
-        }
-        
-        LineEdit {
-            placeholder-text: "Note title...";
-            text <=> root.note-title;
-        }
-        
-        TextEdit {
-            placeholder-text: "Write your note here...";
-            text <=> root.content;
-            wrap: word-wrap;
-        }
-        
-        HorizontalBox {
-            spacing: 10px;
-            Text { text: "Color:"; }
+        VerticalBox {
+            padding: 25px;
+            spacing: 20px;
             
-            Rectangle {
-                width: 30px;
-                height: 30px;
-                background: #ffeb3b;
-                border-radius: 4px;
-                TouchArea {
-                    clicked => { root.note-color = #ffeb3b; }
+            // 标题栏
+            HorizontalBox {
+                spacing: 15px;
+                alignment: space-between;
+                
+                HorizontalBox {
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Text {
+                        text: "📝";
+                        font-size: 24px;
+                    }
+                    
+                    Text {
+                        text: "Smart Note Editor";
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #2c3e50;
+                    }
+                }
+                
+                Button {
+                    text: "✕";
+                    width: 35px;
+                    height: 35px;
+                    clicked => { root.cancel(); }
                 }
             }
             
+            // 分隔线
             Rectangle {
-                width: 30px;
-                height: 30px;
-                background: #ff9800;
-                border-radius: 4px;
-                TouchArea {
-                    clicked => { root.note-color = #ff9800; }
-                }
+                height: 1px;
+                background: #e9ecef;
             }
-            
-            Rectangle {
-                width: 30px;
-                height: 30px;
-                background: #4caf50;
-                border-radius: 4px;
-                TouchArea {
-                    clicked => { root.note-color = #4caf50; }
-                }
-            }
-            
-            Rectangle {
-                width: 30px;
-                height: 30px;
-                background: #2196f3;
-                border-radius: 4px;
-                TouchArea {
-                    clicked => { root.note-color = #2196f3; }
-                }
-            }
-            
-            Rectangle {
-                width: 30px;
-                height: 30px;
-                background: #e91e63;
-                border-radius: 4px;
-                TouchArea {
-                    clicked => { root.note-color = #e91e63; }
-                }
-            }
-        }
         
-        HorizontalBox {
-            spacing: 10px;
-            
-            Button {
-                text: "Cancel";
-                clicked => { root.cancel(); }
+            // 基本信息卡片
+            Rectangle {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 20px;
+                
+                VerticalBox {
+                    spacing: 15px;
+                    
+                    // 标题输入
+                    VerticalBox {
+                        spacing: 8px;
+                        
+                        Text {
+                            text: "📌 Title";
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: #495057;
+                        }
+                        
+                        LineEdit {
+                            placeholder-text: "Enter note title...";
+                            text <=> root.note-title;
+                            font-size: 14px;
+                            height: 38px;
+                        }
+                    }
+                    
+                    // 内容输入
+                    VerticalBox {
+                        spacing: 8px;
+                        
+                        Text {
+                            text: "📄 Content";
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: #495057;
+                        }
+                        
+                        TextEdit {
+                            placeholder-text: "Write your thoughts here...";
+                            text <=> root.content;
+                            wrap: word-wrap;
+                            font-size: 13px;
+                            height: 100px;
+                        }
+                    }
+                    
+                    // 标签输入
+                    VerticalBox {
+                        spacing: 8px;
+                        
+                        Text {
+                            text: "🏷️ Tags";
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: #495057;
+                        }
+                        
+                        LineEdit {
+                            placeholder-text: "tag1, tag2, tag3";
+                            text <=> root.tags-text;
+                            font-size: 13px;
+                            height: 35px;
+                        }
+                    }
+                }
             }
-            
-            Button {
-                text: "Save Note";
-                clicked => { 
-                    root.save-note(root.note-title, root.content, root.note-color);
+        
+            // 设置卡片
+            Rectangle {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 20px;
+                
+                HorizontalBox {
+                    spacing: 20px;
+                    
+                    VerticalBox {
+                        spacing: 8px;
+                        
+                        Text {
+                            text: "📊 Workflow Status";
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: #495057;
+                        }
+                        
+                        ComboBox {
+                            model: ["Idea", "Todo", "In Progress", "Review", "Done"];
+                            current-value <=> root.workflow-status;
+                            height: 35px;
+                        }
+                    }
+                    
+                    VerticalBox {
+                        spacing: 8px;
+                        
+                        Text {
+                            text: "⚡ Priority";
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: #495057;
+                        }
+                        
+                        ComboBox {
+                            model: ["Low", "Medium", "High", "Urgent"];
+                            current-value <=> root.priority;
+                            height: 35px;
+                        }
+                    }
+                }
+            }
+        
+            // 颜色选择卡片
+            Rectangle {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 20px;
+                
+                VerticalBox {
+                    spacing: 12px;
+                    
+                    Text {
+                        text: "🎨 Background Color";
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #495057;
+                    }
+                    
+                    HorizontalBox {
+                        spacing: 12px;
+                        alignment: start;
+                    
+                        Rectangle {
+                            width: 45px;
+                            height: 45px;
+                            background: #ffeb3b;
+                            border-radius: 8px;
+                            border-width: note-color == #ffeb3b ? 3px : 1px;
+                            border-color: note-color == #ffeb3b ? #2196f3 : #dee2e6;
+                            TouchArea {
+                                clicked => { root.note-color = #ffeb3b; }
+                            }
+                            if note-color == #ffeb3b: Text {
+                                text: "✓";
+                                color: #333;
+                                font-size: 18px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        
+                        Rectangle {
+                            width: 45px;
+                            height: 45px;
+                            background: #ff9800;
+                            border-radius: 8px;
+                            border-width: note-color == #ff9800 ? 3px : 1px;
+                            border-color: note-color == #ff9800 ? #2196f3 : #dee2e6;
+                            TouchArea {
+                                clicked => { root.note-color = #ff9800; }
+                            }
+                            if note-color == #ff9800: Text {
+                                text: "✓";
+                                color: white;
+                                font-size: 18px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        
+                        Rectangle {
+                            width: 45px;
+                            height: 45px;
+                            background: #4caf50;
+                            border-radius: 8px;
+                            border-width: note-color == #4caf50 ? 3px : 1px;
+                            border-color: note-color == #4caf50 ? #2196f3 : #dee2e6;
+                            TouchArea {
+                                clicked => { root.note-color = #4caf50; }
+                            }
+                            if note-color == #4caf50: Text {
+                                text: "✓";
+                                color: white;
+                                font-size: 18px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        
+                        Rectangle {
+                            width: 45px;
+                            height: 45px;
+                            background: #2196f3;
+                            border-radius: 8px;
+                            border-width: note-color == #2196f3 ? 3px : 1px;
+                            border-color: note-color == #2196f3 ? #2196f3 : #dee2e6;
+                            TouchArea {
+                                clicked => { root.note-color = #2196f3; }
+                            }
+                            if note-color == #2196f3: Text {
+                                text: "✓";
+                                color: white;
+                                font-size: 18px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        
+                        Rectangle {
+                            width: 45px;
+                            height: 45px;
+                            background: #e91e63;
+                            border-radius: 8px;
+                            border-width: note-color == #e91e63 ? 3px : 1px;
+                            border-color: note-color == #e91e63 ? #2196f3 : #dee2e6;
+                            TouchArea {
+                                clicked => { root.note-color = #e91e63; }
+                            }
+                            if note-color == #e91e63: Text {
+                                text: "✓";
+                                color: white;
+                                font-size: 18px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        
+            // 操作按钮
+            HorizontalBox {
+                spacing: 15px;
+                alignment: end;
+                
+                Button {
+                    text: "❌ Cancel";
+                    width: 90px;
+                    height: 38px;
+                    clicked => { root.cancel(); }
+                }
+                
+                Button {
+                    text: "💾 Save";
+                    width: 90px;
+                    height: 38px;
+                    primary: true;
+                    clicked => { 
+                        root.save-note(
+                            root.note-title, 
+                            root.content, 
+                            root.note-color, 
+                            root.text-color, 
+                            root.tags-text, 
+                            root.workflow-status, 
+                            root.priority, 
+                            root.due-date, 
+                            root.estimated-time
+                        ); 
+                    }
                 }
             }
         }
     }
 }
 
+// 知识图谱侧边栏
+component KnowledgeGraphSidebar inherits Rectangle {
+    in property <[NoteRelation]> relations: [];
+    in property <bool> show-graph: false;
+    
+    callback auto-discover();
+    
+    width: show-graph ? 300px : 0px;
+    background: #f8f9fa;
+    border-width: 1px;
+    border-color: #dee2e6;
+    
+    animate width { duration: 300ms; easing: ease-in-out; }
+    
+    if show-graph: VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        
+        HorizontalBox {
+            Text {
+                text: "Knowledge Graph";
+                font-size: 16px;
+                font-weight: 700;
+            }
+            
+            Button {
+                text: "Auto Discover";
+                clicked => { root.auto-discover(); }
+            }
+        }
+        
+        Text {
+            text: "Note Relationships";
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        if relations.length == 0: Text {
+            text: "No relationships found\nClick 'Auto Discover' to find related notes";
+            font-size: 12px;
+            color: #6c757d;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+// 主窗口
 export component MainWindow inherits Window {
     in-out property <[StickyNote]> notes: [];
+    in-out property <[NoteRelation]> relations: [];
     in-out property <bool> show-editor: false;
+    in-out property <bool> show-knowledge-graph: false;
     in-out property <string> editor-title: "";
     in-out property <string> editor-content: "";
     in-out property <color> editor-color: #ffeb3b;
     in-out property <string> editing-note-id: "";
+    in-out property <string> search-text: "";
+    in-out property <string> filter-status: "All";
+    in-out property <bool> quick-add-mode: false;
+    
+    // 过滤后的notes
+    in-out property <[StickyNote]> filtered-notes: [];
     
     callback add-note();
-    callback save-note(string, string, color);
+    callback save-note(string, string, color, color, string, string, string, string, int);
     callback edit-note(StickyNote);
     callback delete-note(string);
-    callback load-notes();
+    callback position-changed(string, length, length);
+    callback workflow-status-changed(string, string);
+    callback toggle-knowledge-graph();
+    callback auto-discover-relations();
+    callback search-notes(string);
+    callback quick-add-note(string);
+    callback filter-notes-by-status(string);
     
-    title: "Sticky Notes - Rust & Slint";
-    width: 1000px;
-    height: 700px;
+    title: "📝 Smart Sticky Notes";
+    min-width: 800px;
+    min-height: 600px;
     background: #f5f5f5;
     
-    VerticalBox {
-        padding: 20px;
-        spacing: 20px;
-        
-        // Header
-        HorizontalBox {
+    HorizontalBox {
+        // 主工作区
+        VerticalBox {
+            padding: 20px;
             spacing: 20px;
-            alignment: space-between;
             
-            Text {
-                text: "My Sticky Notes";
-                font-size: 24px;
-                font-weight: 700;
-                color: #333;
-            }
-            
-            Button {
-                text: "Add New Note";
-                primary: true;
-                clicked => { root.add-note(); }
-            }
-        }
-        
-        // Notes Grid
-        if notes.length > 0: Flickable {
-            height: parent.height - 100px;
-            viewport-width: parent.width;
-            viewport-height: max(parent.height, notes.length * 120px / 4);
-            
-            for note[index] in notes: StickyNoteCard {
-                x: mod(index, 4) * 240px + 10px;
-                y: floor(index / 4) * 220px + 10px;
-                note: note;
+            // 工具栏
+            HorizontalBox {
+                spacing: 15px;
+                alignment: space-between;
                 
-                edit-note(note) => { root.edit-note(note); }
-                delete-note(id) => { root.delete-note(id); }
+                HorizontalBox {
+                    spacing: 15px;
+                    
+                    Text {
+                        text: "Smart Sticky Notes System";
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: #333;
+                    }
+                    
+                    // 搜索框
+                    LineEdit {
+                        width: 200px;
+                        placeholder-text: "🔍 Search notes...";
+                        text <=> root.search-text;
+                        edited => {
+                            root.search-notes(self.text);
+                        }
+                    }
+                    
+                    // 状态过滤
+                    ComboBox {
+                        width: 120px;
+                        model: ["All", "Idea", "Todo", "In Progress", "Review", "Done"];
+                        current-value <=> root.filter-status;
+                        selected => {
+                            root.filter-notes-by-status(self.current-value);
+                        }
+                    }
+                }
+                
+                HorizontalBox {
+                    spacing: 10px;
+                    
+                    Button {
+                        text: show-knowledge-graph ? "📊 Hide" : "📊 Graph";
+                        clicked => { 
+                            root.show-knowledge-graph = !root.show-knowledge-graph;
+                            root.toggle-knowledge-graph();
+                        }
+                    }
+                    
+                    Button {
+                        text: "🔍 Discover";
+                        clicked => { root.auto-discover-relations(); }
+                    }
+                    
+                    Button {
+                        text: "➕ Quick Add";
+                        primary: true;
+                        clicked => { root.quick-add-mode = !root.quick-add-mode; }
+                    }
+                }
+            }
+            
+            // 快速添加面板
+            if quick-add-mode: Rectangle {
+                height: 80px;
+                background: #ffffff;
+                border-radius: 8px;
+                drop-shadow-blur: 2px;
+                drop-shadow-color: #00000020;
+                border-width: 2px;
+                border-color: #2196f3;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Text {
+                        text: "📝";
+                        font-size: 24px;
+                    }
+                    
+                    quick-input := LineEdit {
+                        placeholder-text: "Type your note and press Enter...";
+                        font-size: 14px;
+                        height: 40px;
+                        
+                        accepted => {
+                            if (self.text != "") {
+                                root.quick-add-note(self.text);
+                                self.text = "";
+                                root.quick-add-mode = false;
+                            }
+                        }
+                    }
+                    
+                    Button {
+                        text: "Add";
+                        primary: true;
+                        clicked => {
+                            if (quick-input.text != "") {
+                                root.quick-add-note(quick-input.text);
+                                quick-input.text = "";
+                                root.quick-add-mode = false;
+                            }
+                        }
+                    }
+                    
+                    Button {
+                        text: "✕";
+                        clicked => { 
+                            root.quick-add-mode = false;
+                            quick-input.text = "";
+                        }
+                    }
+                }
+            }
+            
+            // 便签画布区域
+            Rectangle {
+                background: #ffffff;
+                border-radius: 8px;
+                drop-shadow-blur: 2px;
+                drop-shadow-color: #00000020;
+                clip: true;
+                
+                // 直接放置notes，不使用Flickable避免拖拽冲突
+                Rectangle {
+                    width: parent.width;
+                    height: parent.height;
+                    background: transparent;
+                    
+                    // 渲染过滤后的notes
+                    for note[index] in filtered-notes: DraggableStickyNote {
+                        note: note;
+                        show-relations: show-knowledge-graph;
+                        
+                        edit-note(note) => { root.edit-note(note); }
+                        delete-note(id) => { root.delete-note(id); }
+                        position-changed(id, x, y) => { root.position-changed(id, x, y); }
+                        workflow-status-changed(id, status) => { root.workflow-status-changed(id, status); }
+                    }
+                }
+                
+                // 空状态消息
+                if filtered-notes.length == 0: Rectangle {
+                    background: transparent;
+                    
+                    VerticalBox {
+                        alignment: center;
+                        spacing: 10px;
+                        
+                        Text {
+                            text: "🎯";
+                            font-size: 48px;
+                            horizontal-alignment: center;
+                        }
+                        
+                        Text {
+                            text: "Start Your Smart Notes Journey";
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: #495057;
+                            horizontal-alignment: center;
+                        }
+                        
+                        Text {
+                            text: "Create your first note and experience\nAI-powered knowledge graphs and workflow automation";
+                            font-size: 14px;
+                            color: #6c757d;
+                            horizontal-alignment: center;
+                        }
+                        
+                        Button {
+                            text: "Create First Note";
+                            primary: true;
+                            clicked => { root.add-note(); }
+                        }
+                    }
+                }
             }
         }
         
-        if notes.length == 0: Rectangle {
-            height: 200px;
-            background: transparent;
-            
-            Text {
-                text: "No sticky notes yet.\nClick 'Add New Note' to create your first note!";
-                font-size: 16px;
-                color: #999;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
+        // 知识图谱侧边栏
+        KnowledgeGraphSidebar {
+            relations: root.relations;
+            show-graph: root.show-knowledge-graph;
+            auto-discover => { root.auto-discover-relations(); }
         }
     }
     
-    if show-editor: NoteEditor {
+    // 编辑器对话框
+    if show-editor: AdvancedNoteEditor {
         note-title <=> root.editor-title;
         content <=> root.editor-content;
         note-color <=> root.editor-color;
         
-        save-note(title, content, color) => { 
-            root.save-note(title, content, color);
+        save-note(title, content, color, text-color, tags, status, priority, due-date, time) => { 
+            root.save-note(title, content, color, text-color, tags, status, priority, due-date, time);
         }
         
-        cancel => { 
-            root.show-editor = false; 
-            root.editor-title = "";
-            root.editor-content = "";
-            root.editing-note-id = "";
+        cancel() => {
+            root.show-editor = false;
         }
     }
 } 

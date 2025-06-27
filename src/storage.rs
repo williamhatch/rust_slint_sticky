@@ -1,4 +1,4 @@
-use crate::note::StickyNote;
+use crate::note::AppNote;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -14,7 +14,7 @@ pub struct NoteStorage {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StorageData {
-    notes: HashMap<String, StickyNote>,
+    notes: HashMap<String, AppNote>,
 }
 
 impl Default for StorageData {
@@ -55,7 +55,7 @@ impl NoteStorage {
     }
     
     /// Load all notes from storage
-    pub async fn load_notes(&self) -> Result<Vec<crate::StickyNote>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn load_notes(&self) -> Result<Vec<crate::AppNote>, Box<dyn std::error::Error + Send + Sync>> {
         if !self.notes_file.exists() {
             return Ok(Vec::new());
         }
@@ -70,17 +70,16 @@ impl NoteStorage {
         
         let storage_data: StorageData = serde_json::from_str(&contents)?;
         
-        let notes: Vec<crate::StickyNote> = storage_data
+        let notes: Vec<crate::AppNote> = storage_data
             .notes
             .into_values()
-            .map(|note| note.to_slint_note())
             .collect();
         
         Ok(notes)
     }
     
     /// Save a note to storage
-    pub async fn save_note(&self, note: &StickyNote) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn save_note(&self, note: &AppNote) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut storage_data = self.load_storage_data().await?;
         storage_data.notes.insert(note.id.clone(), note.clone());
         self.save_storage_data(&storage_data).await?;
@@ -96,13 +95,13 @@ impl NoteStorage {
     }
     
     /// Update an existing note in storage
-    pub async fn update_note(&self, note: &StickyNote) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn update_note(&self, note: &AppNote) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Same as save_note since we use HashMap
         self.save_note(note).await
     }
     
     /// Get a specific note by ID
-    pub async fn get_note(&self, note_id: &str) -> Result<Option<StickyNote>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_note(&self, note_id: &str) -> Result<Option<AppNote>, Box<dyn std::error::Error + Send + Sync>> {
         let storage_data = self.load_storage_data().await?;
         Ok(storage_data.notes.get(note_id).cloned())
     }

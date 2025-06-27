@@ -1,6 +1,6 @@
 # Rust Slint Sticky Notes
 
-A cross-platform sticky notes application built with Rust and Slint GUI framework. Inspired by the [Sticky project](https://github.com/williamhatch/sticky), this application provides a native desktop experience for organizing your thoughts and ideas.
+A cross-platform sticky notes application built with Rust and Slint GUI framework. Inspired by the [Sticky project](https://github.com/hamzasaleem2/sticky), this application provides a native desktop experience for organizing your thoughts and ideas.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)
