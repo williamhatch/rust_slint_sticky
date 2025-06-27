@@ -1,0 +1,273 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, TextEdit, ListView, StandardListView } from "std-widgets.slint";
+
+export struct StickyNote {
+    id: string,
+    title: string,
+    content: string,
+    color: color,
+    x: length,
+    y: length,
+    width: length,
+    height: length,
+    created_at: string,
+    updated_at: string,
+}
+
+component StickyNoteCard inherits Rectangle {
+    in property <StickyNote> note;
+    callback clicked();
+    callback edit-note(StickyNote);
+    callback delete-note(string);
+    
+    width: note.width;
+    height: note.height;
+    background: note.color;
+    border-radius: 8px;
+    drop-shadow-blur: 4px;
+    drop-shadow-color: #00000040;
+    
+    touch := TouchArea {
+        clicked => { 
+            root.edit-note(root.note);
+        }
+    }
+    
+    VerticalBox {
+        padding: 12px;
+        spacing: 8px;
+        
+        HorizontalBox {
+            Text {
+                text: note.title;
+                font-weight: 700;
+                font-size: 14px;
+                horizontal-alignment: left;
+                vertical-alignment: top;
+                wrap: word-wrap;
+            }
+            
+            Rectangle {
+                width: 20px;
+                height: 20px;
+                
+                Button {
+                    text: "×";
+                    width: 20px;
+                    height: 20px;
+                    clicked => { root.delete-note(note.id); }
+                }
+            }
+        }
+        
+        Text {
+            text: note.content;
+            font-size: 12px;
+            horizontal-alignment: left;
+            vertical-alignment: top;
+            wrap: word-wrap;
+            overflow: elide;
+        }
+        
+        Text {
+            text: note.updated_at;
+            font-size: 10px;
+            color: #666;
+            horizontal-alignment: left;
+        }
+    }
+}
+
+component NoteEditor inherits Dialog {
+    in-out property <string> note-title: "";
+    in-out property <string> content: "";
+    in-out property <color> note-color: #ffeb3b;
+    
+    callback save-note(string, string, color);
+    callback cancel();
+    
+    width: 400px;
+    height: 300px;
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 10px;
+        
+        Text {
+            text: "Edit Sticky Note";
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        LineEdit {
+            placeholder-text: "Note title...";
+            text <=> root.note-title;
+        }
+        
+        TextEdit {
+            placeholder-text: "Write your note here...";
+            text <=> root.content;
+            wrap: word-wrap;
+        }
+        
+        HorizontalBox {
+            spacing: 10px;
+            Text { text: "Color:"; }
+            
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                background: #ffeb3b;
+                border-radius: 4px;
+                TouchArea {
+                    clicked => { root.note-color = #ffeb3b; }
+                }
+            }
+            
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                background: #ff9800;
+                border-radius: 4px;
+                TouchArea {
+                    clicked => { root.note-color = #ff9800; }
+                }
+            }
+            
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                background: #4caf50;
+                border-radius: 4px;
+                TouchArea {
+                    clicked => { root.note-color = #4caf50; }
+                }
+            }
+            
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                background: #2196f3;
+                border-radius: 4px;
+                TouchArea {
+                    clicked => { root.note-color = #2196f3; }
+                }
+            }
+            
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                background: #e91e63;
+                border-radius: 4px;
+                TouchArea {
+                    clicked => { root.note-color = #e91e63; }
+                }
+            }
+        }
+        
+        HorizontalBox {
+            spacing: 10px;
+            
+            Button {
+                text: "Cancel";
+                clicked => { root.cancel(); }
+            }
+            
+            Button {
+                text: "Save Note";
+                clicked => { 
+                    root.save-note(root.note-title, root.content, root.note-color);
+                }
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    in-out property <[StickyNote]> notes: [];
+    in-out property <bool> show-editor: false;
+    in-out property <string> editor-title: "";
+    in-out property <string> editor-content: "";
+    in-out property <color> editor-color: #ffeb3b;
+    in-out property <string> editing-note-id: "";
+    
+    callback add-note();
+    callback save-note(string, string, color);
+    callback edit-note(StickyNote);
+    callback delete-note(string);
+    callback load-notes();
+    
+    title: "Sticky Notes - Rust & Slint";
+    width: 1000px;
+    height: 700px;
+    background: #f5f5f5;
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 20px;
+        
+        // Header
+        HorizontalBox {
+            spacing: 20px;
+            alignment: space-between;
+            
+            Text {
+                text: "My Sticky Notes";
+                font-size: 24px;
+                font-weight: 700;
+                color: #333;
+            }
+            
+            Button {
+                text: "Add New Note";
+                primary: true;
+                clicked => { root.add-note(); }
+            }
+        }
+        
+        // Notes Grid
+        if notes.length > 0: Flickable {
+            height: parent.height - 100px;
+            viewport-width: parent.width;
+            viewport-height: max(parent.height, notes.length * 120px / 4);
+            
+            for note[index] in notes: StickyNoteCard {
+                x: mod(index, 4) * 240px + 10px;
+                y: floor(index / 4) * 220px + 10px;
+                note: note;
+                
+                edit-note(note) => { root.edit-note(note); }
+                delete-note(id) => { root.delete-note(id); }
+            }
+        }
+        
+        if notes.length == 0: Rectangle {
+            height: 200px;
+            background: transparent;
+            
+            Text {
+                text: "No sticky notes yet.\nClick 'Add New Note' to create your first note!";
+                font-size: 16px;
+                color: #999;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+    
+    if show-editor: NoteEditor {
+        note-title <=> root.editor-title;
+        content <=> root.editor-content;
+        note-color <=> root.editor-color;
+        
+        save-note(title, content, color) => { 
+            root.save-note(title, content, color);
+        }
+        
+        cancel => { 
+            root.show-editor = false; 
+            root.editor-title = "";
+            root.editor-content = "";
+            root.editing-note-id = "";
+        }
+    }
+} 

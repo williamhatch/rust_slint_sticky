@@ -1,0 +1,19 @@
+[package]
+name = "rust_slint_sticky"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A cross-platform sticky notes application built with Rust and Slint"
+license = "MIT"
+
+[dependencies]
+slint = "1.12"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5.0"
+
+[build-dependencies]
+slint-build = "1.12" 

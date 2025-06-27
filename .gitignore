@@ -1,0 +1,55 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Application data
+data/
+*.json.tmp
+
+# Build artifacts
+/target
+/release
+/debug
+
+# Slint generated files
+**/*.slint.rs
+
+# Local environment files
+.env
+.env.local
+
+# Backup files
+*.backup
+*.bak
+
+# Log files
+*.log
+
+# Test coverage
+tarpaulin-report.html
+lcov.info
+
+# Documentation build
+/target/doc/
+
+# Temporary files
+*.tmp
+*.temp 
