@@ -115,88 +115,85 @@ component DraggableStickyNote inherits Rectangle {
         }
     }
     
+    // Delete button - positioned at top-right corner
+    Rectangle {
+        x: parent.width - 24px;
+        y: 4px;
+        width: 20px;
+        height: 20px;
+        background: #ff5722;
+        border-radius: 10px;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: #00000040;
+        
+        TouchArea {
+            clicked => { 
+                root.delete-note(note.id);
+                debug("❌ Delete clicked for note:", note.id);
+            }
+            mouse-cursor: MouseCursor.pointer;
+        }
+        
+        Text {
+            text: "×";
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
     VerticalBox {
         padding: 12px;
+        padding-right: 32px; // Make room for delete button
         spacing: 6px;
         
-        // Title and controls row
-        HorizontalBox {
-            spacing: 8px;
-            alignment: space-between;
+        // Title area
+        Rectangle {
+            height: 32px;
             
-            // Title area - limit width to avoid overflow
-            Rectangle {
-                width: parent.width - 90px; // Leave space for controls
-                height: 32px;
-                
-                TouchArea {
-                    clicked => { root.edit-note(root.note); }
-                    mouse-cursor: MouseCursor.pointer;
-                }
-                
-                Text {
-                    text: note.title;
-                    font-weight: 700;
-                    font-size: 13px;
-                    horizontal-alignment: left;
-                    vertical-alignment: center;
-                    wrap: word-wrap;
-                    overflow: elide;
-                    color: root.effective-text-color;
-                }
+            TouchArea {
+                clicked => { root.edit-note(root.note); }
+                mouse-cursor: MouseCursor.pointer;
             }
             
-                            // Right control area - fixed width to avoid overflow
-                Rectangle {
-                    width: 90px;
-                    height: 32px;
-                    
-                    HorizontalBox {
-                        spacing: 3px;
-                        
-                        // Status dropdown
-                        ComboBox {
-                            width: 62px;
-                            height: 22px;
-                            model: ["Idea", "Todo", "In Progress", "Review", "Done"];
-                            current-value: note.workflow_status;
-                            selected => {
-                                root.workflow-status-changed(root.note.id, self.current-value);
-                                debug("📋 Status changed to:", self.current-value, "for note:", root.note.id);
-                            }
-                        }
-                        
-                        // Delete button
-                        Rectangle {
-                            width: 20px;
-                            height: 20px;
-                            background: #ff5722;
-                            border-radius: 3px;
-                            
-                            TouchArea {
-                                clicked => { 
-                                    root.delete-note(note.id);
-                                    debug("❌ Delete clicked for note:", note.id);
-                                }
-                                mouse-cursor: MouseCursor.pointer;
-                            }
-                            
-                            Text {
-                                text: "×";
-                                color: white;
-                                font-size: 12px;
-                                font-weight: 700;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                        }
-                    }
+            Text {
+                text: note.title;
+                font-weight: 700;
+                font-size: 13px;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+                wrap: no-wrap;
+                overflow: elide;
+                color: root.effective-text-color;
+                x: 0px;
+                width: parent.width;
+            }
+        }
+        
+        // Status control row
+        HorizontalBox {
+            height: 24px;
+            spacing: 8px;
+            alignment: start;
+            
+            // Status dropdown - compact version
+            ComboBox {
+                width: 100px;
+                height: 22px;
+                model: ["Idea", "Todo", "In Progress", "Review", "Done"];
+                current-value: note.workflow_status;
+                selected => {
+                    root.workflow-status-changed(root.note.id, self.current-value);
+                    debug("📋 Status changed to:", self.current-value, "for note:", root.note.id);
                 }
+            }
         }
         
         // Content area - limit height to avoid overflow
         Rectangle {
-            height: 85px; // Fixed height
+            height: 80px; // Fixed height, slightly reduced for better proportions
             
             TouchArea {
                 clicked => { root.edit-note(root.note); }
@@ -211,6 +208,8 @@ component DraggableStickyNote inherits Rectangle {
                 wrap: word-wrap;
                 overflow: elide;
                 color: root.effective-text-color;
+                x: 0px;
+                width: parent.width;
             }
         }
         
@@ -233,19 +232,28 @@ component DraggableStickyNote inherits Rectangle {
             spacing: 8px;
             alignment: space-between;
             
-            // Timestamp
-            Text {
-                text: note.updated_at;
-                font-size: 9px;
-                horizontal-alignment: left;
-                color: root.effective-text-color == #ffffff ? #cccccc : #666666;
-                overflow: elide;
+            // Timestamp - with proper width constraint
+            Rectangle {
+                width: parent.width - 20px; // Leave space for priority indicator
+                
+                Text {
+                    text: note.updated_at;
+                    font-size: 9px;
+                    horizontal-alignment: left;
+                    vertical-alignment: center;
+                    color: root.effective-text-color == #ffffff ? #cccccc : #666666;
+                    overflow: elide;
+                    wrap: no-wrap;
+                    x: 0px;
+                    width: parent.width;
+                }
             }
             
             // Priority indicator
             if note.priority == "High" || note.priority == "Urgent": Text {
                 text: note.priority == "Urgent" ? "🔥" : "⚡";
                 font-size: 12px;
+                width: 16px; // Fixed width for emoji
             }
         }
     }
