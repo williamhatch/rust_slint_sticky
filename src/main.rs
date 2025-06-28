@@ -68,7 +68,7 @@ fn slint_note_to_app_note(note: &StickyNote) -> AppNote {
         created_at: chrono::Utc::now().to_rfc3339(),
         updated_at: note.updated_at.to_string(),
         
-        // 扩展字段
+        // Extended fields
         tags: HashSet::new(),
         keywords: HashSet::new(),
         workflow_status: AppWorkflowStatus::Idea,
@@ -80,7 +80,7 @@ fn slint_note_to_app_note(note: &StickyNote) -> AppNote {
         actual_time: None,
     };
     
-    // 自动分析内容
+    // Auto analyze content
     new_note.extract_keywords();
     new_note.analyze_sentiment();
     
@@ -91,18 +91,18 @@ fn slint_note_to_app_note(note: &StickyNote) -> AppNote {
 async fn main() -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
     
-    // 创建便签和关联关系的数据模型
+    // Create sticky notes and relations data models
     let notes_model = ModelRc::new(VecModel::<StickyNote>::default());
     let relations_model = ModelRc::new(VecModel::<NoteRelation>::default());
     
     ui.set_notes(notes_model.clone());
     ui.set_relations(relations_model.clone());
     
-    // 知识图谱管理器
+    // Knowledge graph manager
     let mut knowledge_graph = KnowledgeGraph::new();
     let mut app_notes: Vec<AppNote> = Vec::new();
     
-    // 设置快速添加便签回调
+    // Setup quick add note callback
     let ui_weak = ui.as_weak();
     let notes_model_clone = notes_model.clone();
     ui.on_quick_add_note(move |text| {
@@ -127,23 +127,23 @@ async fn main() -> Result<(), slint::PlatformError> {
         notes.push(app_note_to_slint_note(&new_note));
         println!("✨ Quick added note: {}", text);
         
-        // 同步更新filtered_notes显示
+        // Sync update filtered_notes display
         let current_filter = ui.get_filter_status();
         let current_search = ui.get_search_text();
         
         if !current_search.is_empty() {
-            // 如果当前有搜索条件，重新执行搜索
+            // If there's a current search condition, re-execute search
             ui.invoke_search_notes(current_search);
         } else if current_filter != "All" {
-            // 如果当前有过滤条件，重新执行过滤  
+            // If there's a current filter condition, re-execute filter
             ui.invoke_filter_notes_by_status(current_filter);
         } else {
-            // 如果没有过滤/搜索条件，显示所有笔记
+            // If no filter/search conditions, display all notes
             ui.set_filtered_notes(notes_model_clone.clone().into());
         }
     });
 
-    // 设置添加便签回调
+    // Setup add note callback
     let ui_weak = ui.as_weak();
     ui.on_add_note(move || {
         let ui = ui_weak.unwrap();
@@ -154,14 +154,14 @@ async fn main() -> Result<(), slint::PlatformError> {
         ui.set_editing_note_id("".into());
     });
     
-    // 设置保存便签回调（增强版）
+    // Setup save note callback (enhanced version)
     let ui_weak = ui.as_weak();
     let notes_model_clone = notes_model.clone();
     ui.on_save_note(move |title, content, color, text_color, tags_text, workflow_status, priority, due_date, estimated_time| {
         let ui = ui_weak.unwrap();
         let editing_id = ui.get_editing_note_id();
         
-        // 创建新便签
+        // Create new note
         let mut note = AppNote::new(title.to_string(), content.to_string());
         let serializable_color = SerializableColor {
             red: color.red(),
@@ -181,13 +181,13 @@ async fn main() -> Result<(), slint::PlatformError> {
             note.text_color = None; // Auto-contrast
         }
         
-        // 解析并设置标签
+        // Parse and set tags
         let tags: Vec<&str> = tags_text.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
         for tag in tags {
             note.add_tag(tag.to_string());
         }
         
-        // 设置工作流状态
+        // Set workflow status
         let status = match workflow_status.as_str() {
             "Todo" => AppWorkflowStatus::Todo,
             "Progress" => AppWorkflowStatus::InProgress,
@@ -198,7 +198,7 @@ async fn main() -> Result<(), slint::PlatformError> {
         };
         note.set_workflow_status(status);
         
-        // 设置优先级
+        // Set priority
         note.priority = match priority.as_str() {
             "Low" => Priority::Low,
             "High" => Priority::High,
@@ -206,7 +206,7 @@ async fn main() -> Result<(), slint::PlatformError> {
             _ => Priority::Medium,
         };
         
-        // 设置截止日期和预估时间
+        // Set due date and estimated time
         if !due_date.is_empty() {
             note.due_date = Some(due_date.to_string());
         }
@@ -214,9 +214,9 @@ async fn main() -> Result<(), slint::PlatformError> {
             note.estimated_time = Some(estimated_time as u32);
         }
         
-        // 如果编辑现有便签，找到合适的位置
+        // If editing existing note, find appropriate position
         if !editing_id.is_empty() {
-            // 在编辑现有便签时保持原位置
+            // Maintain original position when editing existing note
             let vec_model = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
             for i in 0..vec_model.row_count() {
                 if let Some(existing_note) = vec_model.row_data(i) {
@@ -228,8 +228,8 @@ async fn main() -> Result<(), slint::PlatformError> {
                 }
             }
         } else {
-            // 为新便签设置随机位置，避免重叠
-            // 使用便签ID生成伪随机位置
+            // Set random position for new note to avoid overlap
+            // Use note ID to generate pseudo-random position
             let mut hasher = DefaultHasher::new();
             note.id.hash(&mut hasher);
             let hash_value = hasher.finish();
@@ -241,13 +241,13 @@ async fn main() -> Result<(), slint::PlatformError> {
         
         let slint_note = app_note_to_slint_note(&note);
         
-        // 更新模型
+        // Update model
         let vec_model = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
         if editing_id.is_empty() {
-            // 添加新便签
+            // Add new note
             vec_model.push(slint_note);
         } else {
-            // 更新现有便签
+            // Update existing note
             for i in 0..vec_model.row_count() {
                 if let Some(existing_note) = vec_model.row_data(i) {
                     if existing_note.id == editing_id {
@@ -260,29 +260,29 @@ async fn main() -> Result<(), slint::PlatformError> {
             }
         }
         
-        // 关闭编辑器
+        // Close editor
         ui.set_show_editor(false);
         ui.set_editor_title("".into());
         ui.set_editor_content("".into());
         ui.set_editing_note_id("".into());
         
-        // 同步更新filtered_notes显示
+        // Sync update filtered_notes display
         let current_filter = ui.get_filter_status();
         let current_search = ui.get_search_text();
         
         if !current_search.is_empty() {
-            // 如果当前有搜索条件，重新执行搜索
+            // If there's a current search condition, re-execute search
             ui.invoke_search_notes(current_search);
         } else if current_filter != "All" {
-            // 如果当前有过滤条件，重新执行过滤
+            // If there's a current filter condition, re-execute filter
             ui.invoke_filter_notes_by_status(current_filter);
         } else {
-            // 如果没有过滤/搜索条件，显示所有笔记
+            // If no filter/search conditions, display all notes
             ui.set_filtered_notes(notes_model_clone.clone().into());
         }
     });
     
-    // 设置编辑便签回调
+    // Setup edit note callback
     let ui_weak = ui.as_weak();
     ui.on_edit_note(move |note| {
         let ui = ui_weak.unwrap();
@@ -293,14 +293,14 @@ async fn main() -> Result<(), slint::PlatformError> {
         ui.set_editing_note_id(note.id.clone());
     });
     
-    // 设置删除便签回调
+    // Setup delete note callback
     let notes_model_clone = notes_model.clone();
     let ui_weak = ui.as_weak();
     ui.on_delete_note(move |note_id| {
         let ui = ui_weak.unwrap();
         let vec_model = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
         
-        // 找到并删除便签
+        // Find and remove note
         let mut index_to_remove = None;
         for i in 0..vec_model.row_count() {
             if let Some(note) = vec_model.row_data(i) {
@@ -315,18 +315,18 @@ async fn main() -> Result<(), slint::PlatformError> {
             vec_model.remove(index);
             println!("🗑️ Deleted note: {}", note_id);
             
-            // 同步更新filtered_notes显示
+            // Sync update filtered_notes display
             let current_filter = ui.get_filter_status();
             let current_search = ui.get_search_text();
             
             if !current_search.is_empty() {
-                // 如果当前有搜索条件，重新执行搜索
+                // If there's a current search condition, re-execute search
                 ui.invoke_search_notes(current_search);
             } else if current_filter != "All" {
-                // 如果当前有过滤条件，重新执行过滤
+                // If there's a current filter condition, re-execute filter
                 ui.invoke_filter_notes_by_status(current_filter);
             } else {
-                // 如果没有过滤/搜索条件，显示所有剩余笔记
+                // If no filter/search conditions, display all remaining notes
                 ui.set_filtered_notes(notes_model_clone.clone().into());
             }
         }
@@ -350,7 +350,7 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     });
     
-    // 🔥 修复工作流状态更改回调 - 真正更新数据模型
+    // 🔥 Fixed workflow status change callback - actually update data model
     let notes_model_clone = notes_model.clone();
     let ui_weak = ui.as_weak();
     ui.on_workflow_status_changed(move |note_id, status| {

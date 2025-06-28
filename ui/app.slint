@@ -27,7 +27,7 @@ export struct NoteRelation {
     strength: float,
 }
 
-// DraggableStickyNote组件
+// DraggableStickyNote component
 component DraggableStickyNote inherits Rectangle {
     in property <StickyNote> note;
     in property <bool> show-relations;
@@ -37,16 +37,16 @@ component DraggableStickyNote inherits Rectangle {
     callback position-changed(string, length, length);
     callback workflow-status-changed(string, string);
     
-    // 计算自动对比颜色
+    // Calculate automatic contrast color
     function calculate-luminance(color: color) -> float {
         0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue
     }
     
     function get-optimal-text-color(bg-color: color) -> color {
         if (root.calculate-luminance(bg-color) > 0.5) {
-            #000000  // 亮背景用黑色文字
+            #000000  // Black text for light background
         } else {
-            #ffffff  // 暗背景用白色文字
+            #ffffff  // White text for dark background
         }
     }
     
@@ -69,14 +69,14 @@ component DraggableStickyNote inherits Rectangle {
     border-width: 1px;
     border-color: #e0e0e0;
     
-    // 拖拽状态
+    // Drag state
     property <bool> is-dragging: false;
     property <length> drag-start-x;
     property <length> drag-start-y;
     property <length> drag-offset-x;
     property <length> drag-offset-y;
 
-    // 拖拽区域
+    // Drag area
     Rectangle {
         x: 5px;
         y: 5px;
@@ -119,14 +119,14 @@ component DraggableStickyNote inherits Rectangle {
         padding: 12px;
         spacing: 6px;
         
-        // 标题和控件行
+        // Title and controls row
         HorizontalBox {
             spacing: 8px;
             alignment: space-between;
             
-            // 标题区域 - 限制宽度避免越界
+            // Title area - limit width to avoid overflow
             Rectangle {
-                width: parent.width - 90px; // 给控件留空间
+                width: parent.width - 90px; // Leave space for controls
                 height: 32px;
                 
                 TouchArea {
@@ -146,7 +146,7 @@ component DraggableStickyNote inherits Rectangle {
                 }
             }
             
-                            // 右侧控件区域 - 固定宽度避免越界
+                            // Right control area - fixed width to avoid overflow
                 Rectangle {
                     width: 90px;
                     height: 32px;
@@ -154,7 +154,7 @@ component DraggableStickyNote inherits Rectangle {
                     HorizontalBox {
                         spacing: 3px;
                         
-                        // 状态下拉框
+                        // Status dropdown
                         ComboBox {
                             width: 62px;
                             height: 22px;
@@ -166,7 +166,7 @@ component DraggableStickyNote inherits Rectangle {
                             }
                         }
                         
-                        // 删除按钮
+                        // Delete button
                         Rectangle {
                             width: 20px;
                             height: 20px;
@@ -194,9 +194,9 @@ component DraggableStickyNote inherits Rectangle {
                 }
         }
         
-        // 内容区域 - 限制高度避免越界
+        // Content area - limit height to avoid overflow
         Rectangle {
-            height: 85px; // 固定高度
+            height: 85px; // Fixed height
             
             TouchArea {
                 clicked => { root.edit-note(root.note); }
@@ -214,7 +214,7 @@ component DraggableStickyNote inherits Rectangle {
             }
         }
         
-        // 进度条
+        // Progress bar
         Rectangle {
             height: 4px;
             background: #e0e0e0;
@@ -228,12 +228,12 @@ component DraggableStickyNote inherits Rectangle {
             }
         }
         
-        // 底部信息
+        // Bottom information
         HorizontalBox {
             spacing: 8px;
             alignment: space-between;
             
-            // 时间戳
+            // Timestamp
             Text {
                 text: note.updated_at;
                 font-size: 9px;
@@ -242,7 +242,7 @@ component DraggableStickyNote inherits Rectangle {
                 overflow: elide;
             }
             
-            // 优先级指示器
+            // Priority indicator
             if note.priority == "High" || note.priority == "Urgent": Text {
                 text: note.priority == "Urgent" ? "🔥" : "⚡";
                 font-size: 12px;
@@ -251,7 +251,7 @@ component DraggableStickyNote inherits Rectangle {
     }
 }
 
-// 美化的编辑器
+// Beautified editor
 component AdvancedNoteEditor inherits Window {
     in-out property <string> note-title: "";
     in-out property <string> content: "";
@@ -281,7 +281,7 @@ component AdvancedNoteEditor inherits Window {
             padding: 25px;
             spacing: 20px;
             
-            // 标题栏
+            // Title bar
             HorizontalBox {
                 spacing: 15px;
                 alignment: space-between;
@@ -311,13 +311,13 @@ component AdvancedNoteEditor inherits Window {
                 }
             }
             
-            // 分隔线
+            // Separator line
             Rectangle {
                 height: 1px;
                 background: #e9ecef;
             }
         
-            // 基本信息卡片
+            // Basic information card
             Rectangle {
                 background: #f8f9fa;
                 border-radius: 8px;
@@ -326,7 +326,7 @@ component AdvancedNoteEditor inherits Window {
                 VerticalBox {
                     spacing: 15px;
                     
-                    // 标题输入
+                    // Title input
                     VerticalBox {
                         spacing: 8px;
                         
@@ -345,7 +345,7 @@ component AdvancedNoteEditor inherits Window {
                         }
                     }
                     
-                    // 内容输入
+                    // Content input
                     VerticalBox {
                         spacing: 8px;
                         
@@ -365,7 +365,7 @@ component AdvancedNoteEditor inherits Window {
                         }
                     }
                     
-                    // 标签输入
+                    // Tags input
                     VerticalBox {
                         spacing: 8px;
                         
@@ -386,7 +386,7 @@ component AdvancedNoteEditor inherits Window {
                 }
             }
         
-            // 设置卡片
+            // Settings card
             Rectangle {
                 background: #f8f9fa;
                 border-radius: 8px;
@@ -429,10 +429,10 @@ component AdvancedNoteEditor inherits Window {
                         }
                     }
                 }
-            }
+                    }
         
-            // 颜色选择卡片
-            Rectangle {
+        // Color selection card
+        Rectangle {
                 background: #f8f9fa;
                 border-radius: 8px;
                 padding: 20px;
@@ -547,10 +547,10 @@ component AdvancedNoteEditor inherits Window {
                         }
                     }
                 }
-            }
-        
-            // 操作按钮
-            HorizontalBox {
+                }
+    
+    // Action buttons
+    HorizontalBox {
                 spacing: 15px;
                 alignment: end;
                 
@@ -585,7 +585,7 @@ component AdvancedNoteEditor inherits Window {
     }
 }
 
-// 知识图谱侧边栏
+// Knowledge graph sidebar
 component KnowledgeGraphSidebar inherits Rectangle {
     in property <[NoteRelation]> relations: [];
     in property <bool> show-graph: false;
@@ -632,7 +632,7 @@ component KnowledgeGraphSidebar inherits Rectangle {
     }
 }
 
-// 主窗口
+// Main window
 export component MainWindow inherits Window {
     in-out property <[StickyNote]> notes: [];
     in-out property <[NoteRelation]> relations: [];
@@ -646,7 +646,7 @@ export component MainWindow inherits Window {
     in-out property <string> filter-status: "All";
     in-out property <bool> quick-add-mode: false;
     
-    // 过滤后的notes
+    // Filtered notes
     in-out property <[StickyNote]> filtered-notes: [];
     
     callback add-note();
@@ -667,12 +667,12 @@ export component MainWindow inherits Window {
     background: #f5f5f5;
     
     HorizontalBox {
-        // 主工作区
+        // Main workspace
         VerticalBox {
             padding: 20px;
             spacing: 20px;
             
-            // 工具栏
+            // Toolbar
             HorizontalBox {
                 spacing: 15px;
                 alignment: space-between;
@@ -687,7 +687,7 @@ export component MainWindow inherits Window {
                         color: #333;
                     }
                     
-                    // 搜索框
+                    // Search box
                     LineEdit {
                         width: 200px;
                         placeholder-text: "🔍 Search notes...";
@@ -697,7 +697,7 @@ export component MainWindow inherits Window {
                         }
                     }
                     
-                    // 状态过滤
+                    // Status filter
                     ComboBox {
                         width: 120px;
                         model: ["All", "Idea", "Todo", "In Progress", "Review", "Done"];
@@ -732,7 +732,7 @@ export component MainWindow inherits Window {
                 }
             }
             
-            // 快速添加面板
+            // Quick add panel
             if quick-add-mode: Rectangle {
                 height: 80px;
                 background: #ffffff;
@@ -788,7 +788,7 @@ export component MainWindow inherits Window {
                 }
             }
             
-            // 便签画布区域
+            // Notes canvas area
             Rectangle {
                 background: #ffffff;
                 border-radius: 8px;
@@ -796,13 +796,13 @@ export component MainWindow inherits Window {
                 drop-shadow-color: #00000020;
                 clip: true;
                 
-                // 直接放置notes，不使用Flickable避免拖拽冲突
+                // Place notes directly, avoid using Flickable to prevent drag conflicts
                 Rectangle {
                     width: parent.width;
                     height: parent.height;
                     background: transparent;
                     
-                    // 渲染过滤后的notes
+                    // Render filtered notes
                     for note[index] in filtered-notes: DraggableStickyNote {
                         note: note;
                         show-relations: show-knowledge-graph;
@@ -814,7 +814,7 @@ export component MainWindow inherits Window {
                     }
                 }
                 
-                // 空状态消息
+                // Empty state message
                 if filtered-notes.length == 0: Rectangle {
                     background: transparent;
                     
@@ -853,7 +853,7 @@ export component MainWindow inherits Window {
             }
         }
         
-        // 知识图谱侧边栏
+        // Knowledge graph sidebar
         KnowledgeGraphSidebar {
             relations: root.relations;
             show-graph: root.show-knowledge-graph;
@@ -861,7 +861,7 @@ export component MainWindow inherits Window {
         }
     }
     
-    // 编辑器对话框
+    // Editor dialog
     if show-editor: AdvancedNoteEditor {
         note-title <=> root.editor-title;
         content <=> root.editor-content;

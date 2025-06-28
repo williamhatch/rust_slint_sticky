@@ -39,25 +39,25 @@ pub enum Priority {
 /// Workflow status for task automation (for future use)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum WorkflowStatus {
-    Idea,          // 初始想法
-    Todo,          // 待办任务
-    InProgress,    // 进行中
-    Review,        // 待审查
-    Done,          // 已完成
-    Archived,      // 已归档
+    Idea,          // Initial idea
+    Todo,          // To-do task
+    InProgress,    // In progress
+    Review,        // Under review
+    Done,          // Completed
+    Archived,      // Archived
 }
 
 /// Relationship types between notes (for knowledge graph)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RelationType {
-    RelatedTo,     // 相关
-    DependsOn,     // 依赖
-    Blocks,        // 阻塞
-    PartOf,        // 属于
-    SubtaskOf,     // 子任务
-    References,    // 引用
-    Conflicts,     // 冲突
-    Extends,       // 扩展
+    RelatedTo,     // Related
+    DependsOn,     // Depends on
+    Blocks,        // Blocks
+    PartOf,        // Part of
+    SubtaskOf,     // Subtask of
+    References,    // References
+    Conflicts,     // Conflicts
+    Extends,       // Extends
 }
 
 /// A relationship between two notes
@@ -67,7 +67,7 @@ pub struct NoteRelation {
     pub from_note_id: String,
     pub to_note_id: String,
     pub relation_type: RelationType,
-    pub strength: f32,  // 关联强度 0.0-1.0
+    pub strength: f32,  // Relation strength 0.0-1.0
     pub created_at: String,
     pub description: Option<String>,
 }
@@ -87,7 +87,7 @@ pub struct AppNote {
     pub created_at: String,
     pub updated_at: String,
     
-    // 扩展字段
+    // Extended fields
     pub tags: HashSet<String>,
     pub keywords: HashSet<String>,
     pub workflow_status: WorkflowStatus,
@@ -117,7 +117,7 @@ impl AppNote {
             created_at: now.clone(),
             updated_at: now,
             
-            // 扩展字段
+            // Extended fields
             tags: HashSet::new(),
             keywords: HashSet::new(),
             workflow_status: WorkflowStatus::Idea,
@@ -129,7 +129,7 @@ impl AppNote {
             actual_time: None,
         };
         
-        // 自动分析内容
+        // Auto analyze content
         note.extract_keywords();
         note.analyze_sentiment();
         
@@ -142,7 +142,7 @@ impl AppNote {
         self.content = content;
         self.updated_at = Utc::now().format("%Y-%m-%d %H:%M").to_string();
         
-        // 重新分析内容
+        // Re-analyze content
         self.extract_keywords();
         self.analyze_sentiment();
     }
@@ -190,10 +190,10 @@ impl AppNote {
         let content_lower = format!("{} {}", self.title, self.content).to_lowercase();
         let words: Vec<&str> = content_lower.split_whitespace().collect();
         
-        // 简单的关键词提取
+        // Simple keyword extraction
         let keywords: HashSet<String> = words.iter()
-            .filter(|word| word.len() > 3)  // 过滤短词
-            .filter(|word| !is_stop_word(word))  // 过滤停用词
+            .filter(|word| word.len() > 3)  // Filter short words
+            .filter(|word| !is_stop_word(word))  // Filter stop words
             .map(|word| word.to_string())
             .collect();
         
@@ -204,7 +204,7 @@ impl AppNote {
     pub fn analyze_sentiment(&mut self) {
         let content = format!("{} {}", self.title, self.content).to_lowercase();
         
-        // 简单的情感分析
+        // Simple sentiment analysis
         let positive_words = ["good", "great", "excellent", "awesome", "happy", "love", "amazing"];
         let negative_words = ["bad", "terrible", "awful", "hate", "sad", "angry", "frustrated"];
         
@@ -227,21 +227,21 @@ impl AppNote {
     pub fn calculate_similarity(&self, other: &AppNote) -> f32 {
         let mut similarity = 0.0;
         
-        // 标签相似度
+        // Tag similarity
         let tag_intersection: HashSet<_> = self.tags.intersection(&other.tags).collect();
         let tag_union: HashSet<_> = self.tags.union(&other.tags).collect();
         if !tag_union.is_empty() {
             similarity += 0.3 * (tag_intersection.len() as f32 / tag_union.len() as f32);
         }
         
-        // 关键词相似度
+        // Keyword similarity
         let keyword_intersection: HashSet<_> = self.keywords.intersection(&other.keywords).collect();
         let keyword_union: HashSet<_> = self.keywords.union(&other.keywords).collect();
         if !keyword_union.is_empty() {
             similarity += 0.5 * (keyword_intersection.len() as f32 / keyword_union.len() as f32);
         }
         
-        // 情感相似度
+        // Sentiment similarity
         if let (Some(sentiment1), Some(sentiment2)) = (self.sentiment, other.sentiment) {
             similarity += 0.2 * (1.0 - (sentiment1 - sentiment2).abs());
         }
@@ -267,7 +267,7 @@ impl Default for AppNote {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeGraph {
     pub relations: Vec<NoteRelation>,
-    pub auto_relation_threshold: f32,  // 自动建立关联的相似度阈值
+    pub auto_relation_threshold: f32,  // Automatic relation creation similarity threshold
 }
 
 impl KnowledgeGraph {
@@ -306,7 +306,7 @@ impl KnowledgeGraph {
                 let similarity = notes[i].calculate_similarity(&notes[j]);
                 
                 if similarity >= self.auto_relation_threshold {
-                    // 检查关系是否已存在
+                    // Check if relation already exists
                     let exists = self.relations.iter().any(|r| 
                         (r.from_note_id == notes[i].id && r.to_note_id == notes[j].id) ||
                         (r.from_note_id == notes[j].id && r.to_note_id == notes[i].id)
