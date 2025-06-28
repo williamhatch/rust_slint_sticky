@@ -1,29 +1,130 @@
-# Rust Slint Sticky Notes
+# Smart Sticky Notes
 
-A cross-platform sticky notes application built with Rust and Slint GUI framework. Inspired by the [Sticky project](https://github.com/hamzasaleem2/sticky), this application provides a native desktop experience for organizing your thoughts and ideas.
+An intelligent cross-platform sticky notes application built with Rust and Slint GUI framework. Features knowledge graph visualization, workflow automation, and AI-powered content analysis for modern note-taking and knowledge management.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)
 ![Slint](https://img.shields.io/badge/slint-1.12-green.svg)
 
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        UI[Slint UI Framework]
+        Components[UI Components]
+        Editor[Note Editor]
+        Canvas[Notes Canvas]
+    end
+    
+    subgraph "Application Layer"
+        Main[main.rs]
+        Callbacks[Event Callbacks]
+        Models[Data Models]
+    end
+    
+    subgraph "Business Logic Layer"
+        Note[note.rs]
+        Graph[Knowledge Graph]
+        Analytics[Content Analysis]
+    end
+    
+    subgraph "Data Layer"
+        Storage[storage.rs]
+        JSON[JSON Serialization]
+        FS[File System]
+    end
+    
+    subgraph "External Dependencies"
+        Slint[Slint GUI]
+        Tokio[Tokio Runtime]
+        Serde[Serde JSON]
+        Chrono[Chrono DateTime]
+    end
+    
+    UI --> Main
+    Components --> Callbacks
+    Editor --> Models
+    Canvas --> Models
+    
+    Main --> Note
+    Callbacks --> Graph
+    Models --> Analytics
+    
+    Note --> Storage
+    Graph --> JSON
+    Analytics --> FS
+    
+    UI -.-> Slint
+    Main -.-> Tokio
+    Storage -.-> Serde
+    Note -.-> Chrono
+    
+    classDef uiLayer fill:#e1f5fe
+    classDef appLayer fill:#f3e5f5
+    classDef businessLayer fill:#e8f5e8
+    classDef dataLayer fill:#fff3e0
+    classDef external fill:#fafafa
+    
+    class UI,Components,Editor,Canvas uiLayer
+    class Main,Callbacks,Models appLayer
+    class Note,Graph,Analytics businessLayer
+    class Storage,JSON,FS dataLayer
+    class Slint,Tokio,Serde,Chrono external
+```
+
 ## Features
 
-- 📝 **Create and Edit Notes**: Easy-to-use interface for creating and editing sticky notes
-- 🎨 **Customizable Colors**: Choose from multiple color themes for your notes
-- 💾 **Persistent Storage**: Notes are automatically saved to local storage
-- 🖥️ **Cross-Platform**: Runs on Windows, macOS, and Linux
+### Core Features
+- 📝 **Create and Edit Notes**: Intuitive interface with advanced note editor
+- 🎨 **Smart Color Selection**: Auto-contrast text color and customizable backgrounds
+- 🖱️ **Drag & Drop**: Freely move notes around the canvas
+- 💾 **Persistent Storage**: Automatic saving with atomic file operations
+- 🔍 **Real-time Search**: Filter notes by title, content, or tags
+- 🏷️ **Tag System**: Organize notes with custom tags
+- ⚡ **Quick Add**: Instantly create notes with keyboard shortcuts
+
+### Advanced Features
+- 🧠 **Knowledge Graph**: Visualize relationships between notes
+- 🔗 **Auto-Discovery**: AI-powered relationship detection
+- 📊 **Workflow Management**: Track progress with status indicators (Idea → Todo → In Progress → Review → Done)
+- 🎯 **Priority System**: Organize notes by urgency (Low, Medium, High, Urgent)
+- 📈 **Sentiment Analysis**: Automatic content mood detection
+- 🔤 **Keyword Extraction**: AI-powered content analysis
+- 📅 **Due Dates**: Time management with deadline tracking
+- ⏱️ **Time Estimation**: Track estimated vs actual time spent
+
+### Technical Features
+- 🖥️ **Cross-Platform**: Native support for Windows, macOS, and Linux
 - ⚡ **Native Performance**: Built with Rust for optimal speed and memory usage
-- 🔄 **Real-time Updates**: Changes are saved automatically
-- 📱 **Responsive Design**: Adapts to different screen sizes
+- 📱 **Responsive Design**: Adaptive layout for different screen sizes
 - 🎯 **Lightweight**: Minimal resource consumption
+- 🔄 **Real-time Updates**: Instant UI synchronization
 
 ## Technology Stack
 
-- **Backend**: Rust with async/await support via Tokio
-- **GUI Framework**: [Slint](https://slint.dev/) - Modern declarative GUI toolkit
-- **Data Storage**: JSON-based file storage with atomic writes
-- **Serialization**: Serde for JSON handling
-- **Cross-platform**: Native support for Windows, macOS, and Linux
+### Core Technologies
+- **Language**: Rust 1.70+ with modern async/await patterns
+- **GUI Framework**: [Slint](https://slint.dev/) - Declarative UI toolkit with native performance
+- **Runtime**: Tokio for async operations and cross-platform compatibility
+
+### Data & Storage
+- **Storage Format**: JSON with atomic file operations
+- **Serialization**: Serde ecosystem for robust data handling
+- **File System**: Platform-specific data directories with proper permissions
+- **Backup**: Incremental backup system with version control
+
+### AI & Analytics
+- **Content Analysis**: Custom algorithms for keyword extraction
+- **Sentiment Analysis**: Rule-based emotion detection
+- **Knowledge Graph**: Graph-based relationship discovery
+- **Auto-categorization**: Smart tagging based on content patterns
+
+### Development Tools
+- **Build System**: Cargo with custom build scripts
+- **Testing**: Integration tests with async support
+- **Documentation**: Inline docs with examples
+- **CI/CD**: Platform-specific build automation
 
 ## Installation
 
@@ -88,17 +189,87 @@ Notes are automatically saved to:
 ## Project Structure
 
 ```
-rust_slint_sticky/
-├── src/
-│   ├── main.rs          # Application entry point and UI logic
-│   ├── note.rs          # StickyNote struct and implementations
-│   └── storage.rs       # Data persistence layer
-├── ui/
-│   └── app.slint        # Slint UI definition
-├── build.rs             # Build script for Slint compilation
-├── Cargo.toml           # Rust dependencies and project metadata
-└── README.md           # Project documentation
+smart_sticky_notes/
+├── 📁 src/                          # Rust source code
+│   ├── 📄 main.rs                   # Application entry point and UI logic (602 lines)
+│   │                                # - Event handlers and callbacks
+│   │                                # - UI data model management
+│   │                                # - Application lifecycle
+│   ├── 📄 note.rs                   # Core note data structures (335 lines)
+│   │                                # - AppNote struct with extended fields
+│   │                                # - WorkflowStatus and Priority enums
+│   │                                # - Knowledge graph relationships
+│   │                                # - Content analysis (keywords, sentiment)
+│   ├── 📄 storage.rs                # Data persistence layer (221 lines)
+│   │                                # - Async file operations
+│   │                                # - JSON serialization/deserialization
+│   │                                # - Cross-platform storage paths
+│   │                                # - Backup and export functionality
+│   └── 📄 lib.rs                    # Library configuration (65 lines)
+│                                    # - Public API exports
+│                                    # - Module declarations
+├── 📁 ui/                           # User interface definitions
+│   └── 📄 app.slint                 # Slint UI markup (878 lines)
+│                                    # - Component definitions
+│                                    # - Layout and styling
+│                                    # - Event handling
+│                                    # - Responsive design
+├── 📁 tests/                        # Test suite
+│   ├── 📄 integration_tests.rs      # Integration tests (95 lines)
+│   │                                # - End-to-end functionality tests
+│   │                                # - Storage layer testing
+│   └── 📄 test_ui_interactions.md   # UI testing documentation (72 lines)
+│                                    # - Manual testing procedures
+│                                    # - UI interaction scenarios
+├── 📁 scripts/                      # Development tools
+│   └── 📄 dev.sh                    # Development helper script (141 lines)
+│                                    # - Build and run commands
+│                                    # - Testing utilities
+│                                    # - Platform-specific builds
+├── 📄 build.rs                      # Build configuration (3 lines)
+│                                    # - Slint compilation setup
+├── 📄 Cargo.toml                    # Rust project configuration (19 lines)
+│                                    # - Dependencies management
+│                                    # - Project metadata
+├── 📄 Cargo.lock                    # Dependency lock file (5842 lines)
+├── 📄 icon.svg                      # Application icon (18 lines)
+├── 📄 TODO.md                       # Development roadmap (132 lines)
+├── 📄 LICENSE                       # MIT license (21 lines)
+├── 📄 .gitignore                    # Git ignore rules (55 lines)
+└── 📄 README.md                     # Project documentation (this file)
 ```
+
+### Module Responsibilities
+
+#### Core Modules
+- **`main.rs`**: Application orchestration and UI binding
+  - Event handling and callback management
+  - Data model synchronization
+  - Application state management
+  
+- **`note.rs`**: Business logic and data structures
+  - Note data model with extended metadata
+  - Knowledge graph implementation
+  - Content analysis algorithms
+  - Workflow and priority management
+  
+- **`storage.rs`**: Persistence and data management
+  - Async file I/O operations
+  - JSON serialization with Serde
+  - Cross-platform storage handling
+  - Data backup and recovery
+
+#### UI Layer
+- **`app.slint`**: Declarative UI definition
+  - Component hierarchy and layout
+  - Styling and theming
+  - User interaction handling
+  - Responsive design implementation
+
+#### Supporting Files
+- **`build.rs`**: Compile-time code generation for Slint
+- **`dev.sh`**: Development workflow automation
+- **Tests**: Comprehensive testing suite for reliability
 
 ## Configuration
 
