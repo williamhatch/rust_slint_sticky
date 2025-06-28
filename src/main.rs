@@ -308,22 +308,22 @@ async fn main() -> Result<(), slint::PlatformError> {
         let ui = ui_weak.unwrap();
         let vec_model = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
         
-        // 🔥 实际更新note的workflow_status
+        // Update note's workflow_status in the data model
         for i in 0..vec_model.row_count() {
             if let Some(mut note) = vec_model.row_data(i) {
                 if note.id == note_id {
-                    // 🔥 更新状态
+                    // Update status
                     note.workflow_status = status.clone();
-                    // 🔥 更新模型中的数据
+                    // Update data in model
                     vec_model.set_row_data(i, note);
                     println!("✅ Note {} status UPDATED to: {}", note_id, status);
                     
-                    // 🔥 同时更新filtered_notes以保持一致性
-                    // 如果当前是显示所有notes，则也更新filtered_notes
+                    // Update filtered_notes to maintain consistency
+                    // If currently showing all notes, update filtered_notes as well
                     if ui.get_filter_status() == "All" {
                         ui.set_filtered_notes(notes_model_clone.clone().into());
                     } else {
-                        // 如果当前有过滤，重新应用过滤
+                        // If currently filtered, reapply the filter
                         let current_filter = ui.get_filter_status();
                         ui.invoke_filter_notes_by_status(current_filter);
                     }
@@ -382,15 +382,7 @@ async fn main() -> Result<(), slint::PlatformError> {
         println!("Discovered {} relations", relations_count);
     });
     
-    // New feature: search notes callback
-    let _notes_model_clone = notes_model.clone();
-    ui.on_search_notes(move |search_text| {
-        println!("Searching notes: {}", search_text);
-        // TODO: Implement search filtering logic here
-        // For now, just print search text
-    });
-    
-    // 🔥 删除重复的过滤回调定义（因为我们在后面重新定义了更完整的版本）
+    // Search notes functionality will be implemented after filter functionality
     
     // Add some smart sample notes
     let vec_model = notes_model.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
@@ -479,7 +471,7 @@ async fn main() -> Result<(), slint::PlatformError> {
         relations_vec_model.push(slint_relation);
     }
     
-    // 🔥 实现过滤功能
+    // Implement filtering functionality
     let notes_model_clone = notes_model.clone();
     let ui_weak = ui.as_weak();
     ui.on_filter_notes_by_status(move |status| {
@@ -489,11 +481,11 @@ async fn main() -> Result<(), slint::PlatformError> {
         println!("Filtering notes by status: {}", status);
         
         if status == "All" {
-            // 显示所有notes
+            // Show all notes
             ui.set_filtered_notes(notes_model_clone.clone().into());
             println!("Showing all {} notes", vec_model.row_count());
         } else {
-            // 过滤匹配状态的notes
+            // Filter notes matching the status
             let mut filtered_notes = Vec::new();
             let mut count = 0;
             
@@ -512,7 +504,44 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     });
     
-    // 设置初始过滤显示为所有notes
+    // Implement search notes functionality
+    let notes_model_clone = notes_model.clone();
+    let ui_weak = ui.as_weak();
+    ui.on_search_notes(move |search_text| {
+        let ui = ui_weak.unwrap();
+        let vec_model = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
+        
+        println!("🔍 Searching notes: '{}'", search_text);
+        
+        if search_text.is_empty() {
+            // If search is empty, show all notes
+            ui.set_filtered_notes(notes_model_clone.clone().into());
+            println!("✅ Showing all {} notes", vec_model.row_count());
+        } else {
+            // Search for matching notes
+            let mut filtered_notes = Vec::new();
+            let search_lower = search_text.to_lowercase();
+            
+            for i in 0..vec_model.row_count() {
+                if let Some(note) = vec_model.row_data(i) {
+                    let title_match = note.title.to_lowercase().contains(&search_lower);
+                    let content_match = note.content.to_lowercase().contains(&search_lower);
+                    let tags_match = note.tags.iter().any(|tag| tag.to_lowercase().contains(&search_lower));
+                    
+                    if title_match || content_match || tags_match {
+                        filtered_notes.push(note);
+                    }
+                }
+            }
+            
+            let count = filtered_notes.len();
+            let filtered_model = std::rc::Rc::new(VecModel::from(filtered_notes));
+            ui.set_filtered_notes(filtered_model.into());
+            println!("🎯 Found {} notes matching '{}'", count, search_text);
+        }
+    });
+    
+    // Set initial filter to show all notes
     ui.set_filtered_notes(notes_model.clone().into());
     
     println!("🚀 Smart sticky notes system launched successfully!");
