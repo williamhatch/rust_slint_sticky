@@ -106,6 +106,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     let ui_weak = ui.as_weak();
     let notes_model_clone = notes_model.clone();
     ui.on_quick_add_note(move |text| {
+        let ui = ui_weak.unwrap();
         let notes = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
         
         let mut new_note = AppNote::new(
@@ -125,6 +126,21 @@ async fn main() -> Result<(), slint::PlatformError> {
         
         notes.push(app_note_to_slint_note(&new_note));
         println!("✨ Quick added note: {}", text);
+        
+        // 同步更新filtered_notes显示
+        let current_filter = ui.get_filter_status();
+        let current_search = ui.get_search_text();
+        
+        if !current_search.is_empty() {
+            // 如果当前有搜索条件，重新执行搜索
+            ui.invoke_search_notes(current_search);
+        } else if current_filter != "All" {
+            // 如果当前有过滤条件，重新执行过滤  
+            ui.invoke_filter_notes_by_status(current_filter);
+        } else {
+            // 如果没有过滤/搜索条件，显示所有笔记
+            ui.set_filtered_notes(notes_model_clone.clone().into());
+        }
     });
 
     // 设置添加便签回调
@@ -249,6 +265,21 @@ async fn main() -> Result<(), slint::PlatformError> {
         ui.set_editor_title("".into());
         ui.set_editor_content("".into());
         ui.set_editing_note_id("".into());
+        
+        // 同步更新filtered_notes显示
+        let current_filter = ui.get_filter_status();
+        let current_search = ui.get_search_text();
+        
+        if !current_search.is_empty() {
+            // 如果当前有搜索条件，重新执行搜索
+            ui.invoke_search_notes(current_search);
+        } else if current_filter != "All" {
+            // 如果当前有过滤条件，重新执行过滤
+            ui.invoke_filter_notes_by_status(current_filter);
+        } else {
+            // 如果没有过滤/搜索条件，显示所有笔记
+            ui.set_filtered_notes(notes_model_clone.clone().into());
+        }
     });
     
     // 设置编辑便签回调
@@ -264,7 +295,9 @@ async fn main() -> Result<(), slint::PlatformError> {
     
     // 设置删除便签回调
     let notes_model_clone = notes_model.clone();
+    let ui_weak = ui.as_weak();
     ui.on_delete_note(move |note_id| {
+        let ui = ui_weak.unwrap();
         let vec_model = notes_model_clone.as_any().downcast_ref::<VecModel<StickyNote>>().unwrap();
         
         // 找到并删除便签
@@ -280,6 +313,22 @@ async fn main() -> Result<(), slint::PlatformError> {
         
         if let Some(index) = index_to_remove {
             vec_model.remove(index);
+            println!("🗑️ Deleted note: {}", note_id);
+            
+            // 同步更新filtered_notes显示
+            let current_filter = ui.get_filter_status();
+            let current_search = ui.get_search_text();
+            
+            if !current_search.is_empty() {
+                // 如果当前有搜索条件，重新执行搜索
+                ui.invoke_search_notes(current_search);
+            } else if current_filter != "All" {
+                // 如果当前有过滤条件，重新执行过滤
+                ui.invoke_filter_notes_by_status(current_filter);
+            } else {
+                // 如果没有过滤/搜索条件，显示所有剩余笔记
+                ui.set_filtered_notes(notes_model_clone.clone().into());
+            }
         }
     });
     
