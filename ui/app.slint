@@ -172,21 +172,25 @@ component DraggableStickyNote inherits Rectangle {
             }
         }
         
-        // Status control row
-        HorizontalBox {
-            height: 24px;
-            spacing: 8px;
-            alignment: start;
+        // Status control row with spacing
+        Rectangle {
+            height: 32px; // Increased height for better spacing
             
-            // Status dropdown - compact version
-            ComboBox {
-                width: 100px;
-                height: 22px;
-                model: ["Idea", "Todo", "In Progress", "Review", "Done"];
-                current-value: note.workflow_status;
-                selected => {
-                    root.workflow-status-changed(root.note.id, self.current-value);
-                    debug("📋 Status changed to:", self.current-value, "for note:", root.note.id);
+            HorizontalBox {
+                padding-top: 5px; // Center the ComboBox vertically
+                spacing: 8px;
+                alignment: start;
+                
+                // Status dropdown - compact version
+                ComboBox {
+                    width: 100px;
+                    height: 22px;
+                    model: ["Idea", "Todo", "In Progress", "Review", "Done"];
+                    current-value: note.workflow_status;
+                    selected => {
+                        root.workflow-status-changed(root.note.id, self.current-value);
+                        debug("📋 Status changed to:", self.current-value, "for note:", root.note.id);
+                    }
                 }
             }
         }
